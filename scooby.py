@@ -16,7 +16,7 @@ class MyHandler(FileSystemEventHandler):
         if event.is_directory:
             return
         if ".txt" not in temp:
-            print(f'Encrypt Alert: {event.event_type}  path : {event.src_path}')
+            print(f'Suspicious File Alert: {event.event_type}  path : {event.src_path}')
 
     def on_modified(self, event):
         temp = str(event.src_path)
