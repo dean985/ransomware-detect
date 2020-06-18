@@ -1,5 +1,6 @@
 import glob
 import time
+import os
 
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
@@ -16,11 +17,10 @@ class MyHandler(FileSystemEventHandler):
         if event.is_directory:
             return
         if ".txt" not in temp:
-            print(f'Suspicious File Alert: {event.event_type}  path : {event.src_path}')
+            print(f"Suspicious File Alert: {event.event_type}  path : {event.src_path}")
 
     def on_modified(self, event):
         temp = str(event.src_path)
-
         if event.is_directory or '.bu' in temp:
             return
 
@@ -46,6 +46,14 @@ class MyHandler(FileSystemEventHandler):
             text = f.read()
         with open(self.get_back_file_path(path), 'w') as f:
             f.write(text)
+        #Make it hidden for windows
+        if os.name == 'nt':
+            import win32file
+            import win32con
+            import win32api
+            flags = win32file.GetFileAttributesW(self.get_back_file_path(path))
+            win32file.SetFileAttributes(self.get_back_file_path(path), win32con.FILE_ATTRIBUTE_HIDDEN | flags)
+
 
     def isLegal(self, path):
         '''
@@ -55,8 +63,11 @@ class MyHandler(FileSystemEventHandler):
         :return:
         '''
         text = ''
-        with open(path, 'r') as f:
-            text = f.read()
+        try:
+            with open(path, 'r') as f:
+                text = f.read()
+        except UnicodeDecodeError:
+            return False
 
         backup_path = self.get_back_file_path(path)
         backup_text = ''
@@ -126,13 +137,19 @@ class MyHandler(FileSystemEventHandler):
         :param path: of freely edited file
         :return: path of backupfile
         '''
-        lastslash_index = path.rfind('/')
-        toReplace = path[lastslash_index + 1:]
-        path_wo_file = path[:lastslash_index] + "/"
-        backup_path = path_wo_file + "." + toReplace + '.bu'
-        return backup_path
-
-
+        if os.name == 'posix':
+            lastslash_index = path.rfind('/')
+            toReplace = path[lastslash_index + 1:]
+            path_wo_file = path[:lastslash_index] + "/"
+            backup_path = path_wo_file + "." + toReplace + '.bu'
+            return backup_path
+        if os.name == 'nt':
+            newpath = os.getcwd()
+            newpath += '\\data\\' + os.path.basename(path) +'.bu'
+            return newpath
+            
+              
+        
 if __name__ == "__main__":
     event_handler = MyHandler()
     path = 'data/'
