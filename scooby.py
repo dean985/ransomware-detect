@@ -1,3 +1,4 @@
+import ctypes
 import glob
 import time
 import os
@@ -14,10 +15,12 @@ class MyHandler(FileSystemEventHandler):
 
     def on_created(self, event):
         temp = str(event.src_path)
-        if event.is_directory:
+        if event.is_directory or '.bu' in temp:
             return
         if ".txt" not in temp:
             print(f"Suspicious File Alert: {event.event_type}  path : {event.src_path}")
+        else:
+            self.backup(temp)
 
     def on_modified(self, event):
         temp = str(event.src_path)
@@ -29,31 +32,36 @@ class MyHandler(FileSystemEventHandler):
 
         if self.isLegal(event.src_path):
             self.backup(event.src_path)
-        # if it isn't legal
-        # send alert
         else:
             print(f'Encrypt Alert: {event.event_type}  path : {event.src_path}')
 
     def backup(self, path):
-        '''
+        """
         Backup a file and save it to current folder
         With extension bu
         :param path: the file
         :return: None
-        '''
+        """
         text = ''
+        print(path)
+        time.sleep(1)
         with open(path, 'r') as f:
             text = f.read()
+        try:
+            if os.name == 'nt':
+                ctypes.windll.kernel32.SetFileAttributesW(self.get_back_file_path(path), 0x80)
+        except ...:
+            pass
+
         with open(self.get_back_file_path(path), 'w') as f:
             f.write(text)
-        #Make it hidden for windows
+        # Make it hidden for windows
         if os.name == 'nt':
             import win32file
             import win32con
             import win32api
             flags = win32file.GetFileAttributesW(self.get_back_file_path(path))
             win32file.SetFileAttributes(self.get_back_file_path(path), win32con.FILE_ATTRIBUTE_HIDDEN | flags)
-
 
     def isLegal(self, path):
         '''
@@ -145,12 +153,12 @@ class MyHandler(FileSystemEventHandler):
             return backup_path
         if os.name == 'nt':
             newpath = os.getcwd()
-            newpath += '\\data\\' + os.path.basename(path) +'.bu'
+            newpath += '\\data\\' + os.path.basename(path) + '.bu'
             return newpath
-            
-              
-        
+
+
 if __name__ == "__main__":
+    os.system('python reset_directory.py')
     event_handler = MyHandler()
     path = 'data/'
     txtfiles = []
